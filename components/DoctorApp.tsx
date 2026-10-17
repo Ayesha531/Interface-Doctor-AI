@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+import { BeforeAfterComparison } from '@/components/BeforeAfterComparison';
 import { FindingsList } from '@/components/FindingsList';
 import { FlowStateMatrix } from '@/components/FlowStateMatrix';
 import { ImageIssueOverlay } from '@/components/ImageIssueOverlay';
 import { StatusPill } from '@/components/StatusPill';
 import type { Diagnosis } from '@/lib/diagnosis';
 import { validateDiagnosisPayload, validateImageFile } from '@/lib/diagnosis';
+import { generateControlledRedesign } from '@/lib/redesign';
 import { createSampleScreenshot } from '@/lib/sampleScreenshot';
 
 type Screenshot = {
@@ -36,6 +38,7 @@ export function DoctorApp() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [screenshot, setScreenshot] = useState<Screenshot | null>(null);
   const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
+  const [redesign, setRedesign] = useState<ReturnType<typeof generateControlledRedesign>>(null);
   const [diagnoseState, setDiagnoseState] = useState<DiagnoseState>('empty');
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +65,7 @@ export function DoctorApp() {
       const dataUrl = await readAsDataUrl(file);
       setScreenshot({ dataUrl, fileName: file.name, mimeType: file.type, sizeLabel: bytesToLabel(file.size) });
       setDiagnosis(null);
+      setRedesign(null);
       setError(null);
       setDiagnoseState('ready');
     } catch (eventError) {
@@ -75,6 +79,7 @@ export function DoctorApp() {
       const sample = await createSampleScreenshot();
       setScreenshot({ ...sample, sizeLabel: 'sample' });
       setDiagnosis(null);
+      setRedesign(null);
       setError(null);
       setDiagnoseState('ready');
     } catch (eventError) {
@@ -93,6 +98,7 @@ export function DoctorApp() {
     setDiagnoseState('loading');
     setError(null);
     setDiagnosis(null);
+    setRedesign(null);
 
     try {
       const response = await fetch('/api/diagnose', {
@@ -104,6 +110,7 @@ export function DoctorApp() {
       if (!response.ok) throw new Error(payload?.error || 'Diagnosis failed.');
       const validated = validateDiagnosisPayload(payload);
       setDiagnosis(validated);
+      setRedesign(generateControlledRedesign(validated));
       setDiagnoseState('success');
     } catch (eventError) {
       setError(eventError instanceof Error ? eventError.message : 'Diagnosis failed.');
